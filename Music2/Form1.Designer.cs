@@ -1,5 +1,6 @@
 ﻿
 using NAudio.Wave;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -40,25 +41,32 @@ namespace Music2
             this.ClientSize = new System.Drawing.Size(400, 450);
             this.Text = "Player";
 
+            OpenForm();
+            this.FormClosing += Form1_FormClosing;
+
             delete_music.Text = "Delete";
             delete_music.Location = new Point(300, 300);
             delete_music.Size = new System.Drawing.Size(50, 50);
+            delete_music.Click += Delete_music_Click;
             Controls.Add(delete_music);
 
             play.Location = new Point(175, 150);
             play.Size = new System.Drawing.Size(50, 50);
             play.SizeMode = PictureBoxSizeMode.Zoom;
             play.Image = Image.FromFile("2088539.png");
+            play.Click += Play_Click;
             Controls.Add(play);
 
             right.Location = new Point(225, 150);
             right.Text = ">";
             right.Size = new System.Drawing.Size(50, 50);
+            right.Click += Right_Click;
             Controls.Add(right);
 
             left.Location = new Point(125, 150);
             left.Text = "<";
             left.Size = new System.Drawing.Size(50, 50);
+            left.Click += Left_Click;
             Controls.Add(left);
 
             add_music.Location = new Point(300, 250);
@@ -82,6 +90,124 @@ namespace Music2
         public int music_ = 0;
         bool x = true;
         string[] path;
+
+        private void OpenForm()
+        {
+            if (File.Exists("info.txt"))
+            {
+                path = File.ReadAllLines("info.txt");
+                for (int i = 0; i < path.Length; i++)
+                {
+                    file_ = new FileInfo(path[i]);
+                    paths.Add(path[i]);
+                    musics.Items.Add(file_.Name);
+                }
+                music_ = musics.Items.Count - 1;
+
+            }
+        }
+
+        private void Right_Click(object sender, EventArgs e)
+        {
+            if (musics.SelectedIndex != -1)
+            {
+                stop();
+                if (musics.SelectedIndex == music_)
+                {
+                    musics.SelectedIndex = 0;
+                    start_();
+
+                }
+                else
+                {
+                    play.Image = Image.FromFile("images.png");
+                    musics.SelectedIndex++;
+                    start_();
+                }
+            }
+        }
+
+        private void Left_Click(object sender, EventArgs e)
+        {
+            if (musics.SelectedIndex != -1)
+            {
+                stop();
+                if (musics.SelectedIndex == 0)
+                {
+                    musics.SelectedIndex = music_;
+                    start_();
+
+                }
+                else
+                {
+                    play.Image = Image.FromFile("images.png");
+                    musics.SelectedIndex--;
+                    start_();
+                }
+            }
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            File.WriteAllLines("info.txt", paths);
+        }
+
+        private void Play_Click(object sender, System.EventArgs e)
+        {
+            if (x == true)
+            {
+                start_();
+            }
+            else
+            {
+                stop();
+            }
+        }
+
+        private void stop()
+        {
+            outputDevice?.Stop();
+            x = true;
+            play.Image = Image.FromFile("2088539.png");
+        }
+        private void start_()
+        {
+            if (musics.SelectedIndex != -1)
+            {
+                outputDevice = new WaveOutEvent();
+                audioFile = new AudioFileReader(paths[musics.SelectedIndex]);
+                outputDevice.Init(audioFile);
+                outputDevice.Play();
+                play.Image = Image.FromFile("images.png");
+                x = false;
+                outputDevice.PlaybackStopped += OutputDevice_PlaybackStopped;
+            }
+            else
+            {
+                MessageBox.Show("Выберите музыку");
+            }
+        }
+
+        private void OutputDevice_PlaybackStopped(object sender, StoppedEventArgs e)
+        {
+            stop();
+        }
+
+        private void Delete_music_Click(object sender, System.EventArgs e)
+        {
+            if (musics.SelectedIndex != -1)
+            {
+                stop();
+                paths.RemoveAt(musics.SelectedIndex);
+                music_--;
+                musics.Items.RemoveAt(musics.SelectedIndex);
+            }
+            else
+            {
+                MessageBox.Show("Выберите музыку");
+            }
+        }
+
         private void Add_music_Click(object sender, System.EventArgs e)
         {
             music_ = path.Length - 1;
@@ -93,13 +219,9 @@ namespace Music2
                     music_++;
                     paths.Add(dialog.FileName);
                     musics.Items.Add(dialog.SafeFileName);
-
-                    //musica.Last().ToString()
-                    //musics.Items.Add(musica.Last().ToString()); надо
                 }
             }
         }
-
         Button add_music = new Button();
         Button delete_music = new Button();
         PictureBox play = new PictureBox();
